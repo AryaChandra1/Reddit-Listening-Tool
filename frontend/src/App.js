@@ -32,12 +32,31 @@ function App() {
 
   const fetchSavedKeywords = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/saved-keywords`);
+      console.log('Fetching saved keywords from:', `${API_BASE_URL}/api/saved-keywords`);
+      const response = await fetch(`${API_BASE_URL}/api/saved-keywords`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Saved keywords response status:', response.status);
+      console.log('Saved keywords response ok:', response.ok);
+      
       if (response.ok) {
-        const data = await response.json();
-        setSavedKeywords(data || []);
+        const text = await response.text();
+        console.log('Saved keywords raw response:', text);
+        
+        if (text) {
+          const data = JSON.parse(text);
+          setSavedKeywords(Array.isArray(data) ? data : []);
+        } else {
+          console.warn('Empty response for saved keywords');
+          setSavedKeywords([]);
+        }
       } else {
-        console.error('Failed to fetch saved keywords:', response.statusText);
+        console.error('Failed to fetch saved keywords:', response.status, response.statusText);
         setSavedKeywords([]);
       }
     } catch (error) {

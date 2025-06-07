@@ -48,10 +48,14 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/api/search-history`);
       if (response.ok) {
         const data = await response.json();
-        setSearchHistory(data);
+        setSearchHistory(data || []);
+      } else {
+        console.error('Failed to fetch search history:', response.statusText);
+        setSearchHistory([]);
       }
     } catch (error) {
       console.error('Error fetching search history:', error);
+      setSearchHistory([]);
     }
   };
 

@@ -150,8 +150,14 @@ function App() {
         fetchSavedKeywords();
         alert('Keyword deleted successfully!');
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
+        let errorMessage = 'Unknown error occurred';
+        try {
+          const error = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        alert(`Error: ${errorMessage}`);
       }
     } catch (error) {
       console.error('Error deleting keyword:', error);

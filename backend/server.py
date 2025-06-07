@@ -112,7 +112,7 @@ async def health_check():
 @app.post("/api/search-posts", response_model=List[RedditPost])
 async def search_posts(request: KeywordRequest):
     """Search Reddit for posts containing the specified keyword"""
-    if not reddit:
+    if reddit is None:
         raise HTTPException(status_code=500, detail="Reddit API not available")
     
     try:
@@ -154,7 +154,7 @@ async def search_posts(request: KeywordRequest):
                 continue
         
         # Store search results in database if available
-        if db:
+        if db is not None:
             try:
                 search_record = {
                     "id": str(uuid.uuid4()),

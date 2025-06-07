@@ -247,10 +247,12 @@ async def get_saved_keywords():
     
     try:
         keywords = list(keywords_collection.find({"active": True}, {"_id": 0}))
-        return [SavedKeyword(**keyword) for keyword in keywords]
+        result = [SavedKeyword(**keyword) for keyword in keywords]
+        return result
     except Exception as e:
         logger.error(f"Error fetching keywords: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching keywords: {str(e)}")
+        # Return empty list instead of raising exception
+        return []
 
 @app.delete("/api/saved-keywords/{keyword_id}")
 async def delete_keyword(keyword_id: str):

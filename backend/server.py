@@ -102,6 +102,11 @@ class SavedKeyword(BaseModel):
 async def root():
     return {"message": "Reddit Social Listening Tool API"}
 
+@app.get("/api/test")
+async def test_endpoint():
+    """Simple test endpoint to debug issues"""
+    return {"status": "ok", "message": "API is working", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 @app.get("/api/health")
 async def health_check():
     return {

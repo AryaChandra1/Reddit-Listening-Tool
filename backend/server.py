@@ -249,7 +249,7 @@ async def get_saved_keywords():
 @app.delete("/api/saved-keywords/{keyword_id}")
 async def delete_keyword(keyword_id: str):
     """Delete a saved keyword"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
     try:

@@ -213,7 +213,7 @@ async def filter_posts(posts: List[RedditPost], filters: SearchFilters):
 @app.post("/api/save-keyword", response_model=SavedKeyword)
 async def save_keyword(request: KeywordRequest):
     """Save a keyword for tracking"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
     try:

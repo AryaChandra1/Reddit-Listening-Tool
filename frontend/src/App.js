@@ -32,10 +32,14 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/api/saved-keywords`);
       if (response.ok) {
         const data = await response.json();
-        setSavedKeywords(data);
+        setSavedKeywords(data || []);
+      } else {
+        console.error('Failed to fetch saved keywords:', response.statusText);
+        setSavedKeywords([]);
       }
     } catch (error) {
       console.error('Error fetching saved keywords:', error);
+      setSavedKeywords([]);
     }
   };
 

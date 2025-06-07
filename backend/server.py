@@ -271,7 +271,7 @@ async def delete_keyword(keyword_id: str):
 @app.get("/api/search-history")
 async def get_search_history():
     """Get recent search history"""
-    if not db:
+    if db is None:
         raise HTTPException(status_code=500, detail="Database not available")
     
     try:

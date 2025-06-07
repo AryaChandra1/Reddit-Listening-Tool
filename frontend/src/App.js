@@ -67,12 +67,31 @@ function App() {
 
   const fetchSearchHistory = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/search-history`);
+      console.log('Fetching search history from:', `${API_BASE_URL}/api/search-history`);
+      const response = await fetch(`${API_BASE_URL}/api/search-history`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Search history response status:', response.status);
+      console.log('Search history response ok:', response.ok);
+      
       if (response.ok) {
-        const data = await response.json();
-        setSearchHistory(data || []);
+        const text = await response.text();
+        console.log('Search history raw response:', text);
+        
+        if (text) {
+          const data = JSON.parse(text);
+          setSearchHistory(Array.isArray(data) ? data : []);
+        } else {
+          console.warn('Empty response for search history');
+          setSearchHistory([]);
+        }
       } else {
-        console.error('Failed to fetch search history:', response.statusText);
+        console.error('Failed to fetch search history:', response.status, response.statusText);
         setSearchHistory([]);
       }
     } catch (error) {

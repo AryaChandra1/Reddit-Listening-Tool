@@ -291,7 +291,8 @@ async def get_search_history():
         return searches
     except Exception as e:
         logger.error(f"Error fetching search history: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching search history: {str(e)}")
+        # Return empty list instead of raising exception
+        return []
 
 if __name__ == "__main__":
     import uvicorn

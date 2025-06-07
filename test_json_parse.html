@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Parse Test</title>
+</head>
+<body>
+    <h1>JSON Parse Test</h1>
+    <button id="testUndefined">Test JSON.parse(undefined)</button>
+    <button id="testEmptyString">Test JSON.parse("")</button>
+    <button id="testNull">Test JSON.parse(null)</button>
+    <button id="testValidJson">Test JSON.parse('{"test": "valid"}')</button>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        document.getElementById('testUndefined').addEventListener('click', function() {
+            try {
+                const result = JSON.parse(undefined);
+                document.getElementById('result').textContent = 'Success: ' + JSON.stringify(result);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        });
+        
+        document.getElementById('testEmptyString').addEventListener('click', function() {
+            try {
+                const result = JSON.parse("");
+                document.getElementById('result').textContent = 'Success: ' + JSON.stringify(result);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        });
+        
+        document.getElementById('testNull').addEventListener('click', function() {
+            try {
+                const result = JSON.parse(null);
+                document.getElementById('result').textContent = 'Success: ' + JSON.stringify(result);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        });
+        
+        document.getElementById('testValidJson').addEventListener('click', function() {
+            try {
+                const result = JSON.parse('{"test": "valid"}');
+                document.getElementById('result').textContent = 'Success: ' + JSON.stringify(result);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

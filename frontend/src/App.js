@@ -81,15 +81,23 @@ function App() {
 
       if (response.ok) {
         const data = await response.json();
-        setPosts(data);
+        setPosts(data || []);
         fetchSearchHistory(); // Refresh search history
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
+        let errorMessage = 'Unknown error occurred';
+        try {
+          const error = await response.json();
+          errorMessage = error.detail || errorMessage;
+        } catch (e) {
+          errorMessage = response.statusText || errorMessage;
+        }
+        alert(`Error: ${errorMessage}`);
+        setPosts([]);
       }
     } catch (error) {
       console.error('Error searching posts:', error);
       alert('Error searching posts. Please check your connection.');
+      setPosts([]);
     } finally {
       setLoading(false);
     }

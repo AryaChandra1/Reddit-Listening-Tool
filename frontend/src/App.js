@@ -3,6 +3,9 @@ import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
+// Debug: Log the API URL
+console.log('API_BASE_URL:', API_BASE_URL);
+
 function App() {
   const [keyword, setKeyword] = useState('');
   const [subreddit, setSubreddit] = useState('all');

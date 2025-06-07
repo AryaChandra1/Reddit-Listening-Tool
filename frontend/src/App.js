@@ -108,9 +108,11 @@ function App() {
 
     setLoading(true);
     try {
+      console.log('Searching posts with:', { keyword: searchKeyword, subreddit: searchSubreddit });
       const response = await fetch(`${API_BASE_URL}/api/search-posts`, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -120,15 +122,31 @@ function App() {
         }),
       });
 
+      console.log('Search posts response status:', response.status);
+      console.log('Search posts response ok:', response.ok);
+
       if (response.ok) {
-        const data = await response.json();
-        setPosts(data || []);
-        fetchSearchHistory(); // Refresh search history
+        const text = await response.text();
+        console.log('Search posts raw response length:', text?.length);
+        
+        if (text) {
+          const data = JSON.parse(text);
+          setPosts(Array.isArray(data) ? data : []);
+          fetchSearchHistory(); // Refresh search history
+        } else {
+          console.warn('Empty response for search posts');
+          setPosts([]);
+        }
       } else {
         let errorMessage = 'Unknown error occurred';
         try {
-          const error = await response.json();
-          errorMessage = error.detail || errorMessage;
+          const text = await response.text();
+          if (text) {
+            const error = JSON.parse(text);
+            errorMessage = error.detail || errorMessage;
+          } else {
+            errorMessage = response.statusText || errorMessage;
+          }
         } catch (e) {
           errorMessage = response.statusText || errorMessage;
         }

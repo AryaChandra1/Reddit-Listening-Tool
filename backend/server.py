@@ -108,6 +108,11 @@ async def test_endpoint():
     """Simple test endpoint to debug issues"""
     return {"status": "ok", "message": "API is working", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+@app.get("/debug")
+async def debug_page():
+    """Serve debug HTML page"""
+    return FileResponse("/app/debug.html")
+
 @app.get("/api/health")
 async def health_check():
     return {

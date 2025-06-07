@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Social Listening Tool - Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .results { margin-top: 20px; padding: 10px; background: #f8f9fa; border-radius: 4px; max-height: 400px; overflow-y: auto; }
+        .post { border-bottom: 1px solid #ddd; padding: 10px 0; }
+        .post:last-child { border-bottom: none; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Reddit Social Listening Tool - Debug Page</h1>
+    <p>This page tests the API directly without React to isolate issues.</p>
+
+    <div class="section">
+        <h2>API Health Check</h2>
+        <button onclick="testHealth()">Test Health</button>
+        <div id="healthResult" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h2>Search Posts</h2>
+        <input type="text" id="keyword" placeholder="Keyword" value="bitcoin">
+        <input type="text" id="subreddit" placeholder="Subreddit" value="all">
+        <button onclick="searchPosts()">Search</button>
+        <div id="searchResult" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h2>Saved Keywords</h2>
+        <button onclick="getSavedKeywords()">Get Saved Keywords</button>
+        <div id="keywordsResult" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h2>Search History</h2>
+        <button onclick="getSearchHistory()">Get Search History</button>
+        <div id="historyResult" class="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://68b19118-d393-4742-8fd9-8aedc0c31471.preview.emergentagent.com';
+
+        function log(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                log('healthResult', `Health Check: ${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log('healthResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function searchPosts() {
+            try {
+                const keyword = document.getElementById('keyword').value;
+                const subreddit = document.getElementById('subreddit').value;
+                
+                const response = await fetch(`${API_BASE}/api/search-posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        keyword: keyword,
+                        subreddit: subreddit,
+                        limit: 10
+                    })
+                });
+
+                const data = await response.json();
+                
+                let html = `<h3>Found ${data.length} posts for "${keyword}":</h3>`;
+                data.forEach(post => {
+                    html += `
+                        <div class="post">
+                            <h4><a href="${post.permalink}" target="_blank">${post.title}</a></h4>
+                            <p>r/${post.subreddit} • by ${post.author} • ${post.upvotes} upvotes • ${post.comments} comments</p>
+                        </div>
+                    `;
+                });
+                
+                log('searchResult', html);
+            } catch (error) {
+                log('searchResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function getSavedKeywords() {
+            try {
+                const response = await fetch(`${API_BASE}/api/saved-keywords`);
+                const data = await response.json();
+                
+                let html = `<h3>Saved Keywords (${data.length}):</h3>`;
+                data.forEach(keyword => {
+                    html += `
+                        <div class="post">
+                            <strong>${keyword.keyword}</strong> in r/${keyword.subreddit}
+                            <br><small>Created: ${new Date(keyword.created_at).toLocaleString()}</small>
+                        </div>
+                    `;
+                });
+                
+                log('keywordsResult', html);
+            } catch (error) {
+                log('keywordsResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        async function getSearchHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/api/search-history`);
+                const data = await response.json();
+                
+                let html = `<h3>Search History (${data.length}):</h3>`;
+                data.forEach(search => {
+                    html += `
+                        <div class="post">
+                            <strong>"${search.keyword}"</strong> in r/${search.subreddit}
+                            <br>Found ${search.post_count} posts
+                            <br><small>${new Date(search.timestamp).toLocaleString()}</small>
+                        </div>
+                    `;
+                });
+                
+                log('historyResult', html);
+            } catch (error) {
+                log('historyResult', `Error: ${error.message}`, true);
+            }
+        }
+
+        // Auto-run health check on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            testHealth();
+        });
+    </script>
+</body>
+</html>

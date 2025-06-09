@@ -408,9 +408,26 @@ class RedditSocialListenerAPITest(unittest.TestCase):
             data = response.json()
             print(f"Dashboard data: {json.dumps(data, indent=2)}")
             
+            # Verify all required dashboard components are present
             self.assertIn("recent_searches", data)
             self.assertIn("sentiment_trends", data)
             self.assertIn("keyword_stats", data)
+            self.assertIn("summary_stats", data)
+            
+            # Verify summary stats structure
+            summary_stats = data["summary_stats"]
+            self.assertIn("total_searches", summary_stats)
+            self.assertIn("total_posts", summary_stats)
+            self.assertIn("avg_sentiment", summary_stats)
+            
+            # Verify data types
+            self.assertIsInstance(summary_stats["total_searches"], int)
+            self.assertIsInstance(summary_stats["total_posts"], int)
+            
+            # Check that the API returns proper empty arrays instead of errors
+            self.assertIsInstance(data["recent_searches"], list)
+            self.assertIsInstance(data["sentiment_trends"], list)
+            self.assertIsInstance(data["keyword_stats"], list)
             
             print("✅ Dashboard analytics test passed")
         except Exception as e:

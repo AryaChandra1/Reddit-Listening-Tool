@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: reddit-social-listener-api
+    runtime: python3
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT
+    plan: free
+    env: python
+    healthCheckPath: /api/health
+    envVars:
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+      - key: REDDIT_USER_AGENT
+        value: RedditSocialListener/1.0
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: reddit_social_listener

@@ -272,13 +272,31 @@ function App() {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('Fetching dashboard data...');
       const response = await makeAuthenticatedRequest('/api/dashboard');
       if (response.ok) {
         const data = await response.json();
+        console.log('Dashboard data received:', data);
         setDashboardData(data);
+      } else {
+        console.error('Failed to fetch dashboard data:', response.status, response.statusText);
+        // Set empty dashboard data on error
+        setDashboardData({
+          recent_searches: [],
+          sentiment_trends: [],
+          keyword_stats: [],
+          summary_stats: { total_searches: 0, total_posts: 0, avg_sentiment: null }
+        });
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set empty dashboard data on error
+      setDashboardData({
+        recent_searches: [],
+        sentiment_trends: [],
+        keyword_stats: [],
+        summary_stats: { total_searches: 0, total_posts: 0, avg_sentiment: null }
+      });
     }
   };
 

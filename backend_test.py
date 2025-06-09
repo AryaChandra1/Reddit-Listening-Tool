@@ -74,7 +74,6 @@ class RedditSocialListenerAPITest(unittest.TestCase):
             )
             
             print(f"Registration response status: {reg_response.status_code}")
-            print(f"Registration response body: {reg_response.text}")
             
             # If registration fails with 400 (user already exists), try login
             if reg_response.status_code == 400:
@@ -102,12 +101,10 @@ class RedditSocialListenerAPITest(unittest.TestCase):
             )
             
             print(f"Login response status: {login_response.status_code}")
-            print(f"Login response body: {login_response.text}")
             
             self.assertEqual(login_response.status_code, 200)
             
             login_data = login_response.json()
-            print(f"Login response: {json.dumps(login_data, indent=2)}")
             
             self.assertIn("user", login_data)
             self.assertIn("access_token", login_data)

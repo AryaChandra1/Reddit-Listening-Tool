@@ -133,6 +133,10 @@ class RedditSocialListenerAPITest(unittest.TestCase):
         print("\n🔍 Testing Get Current User...")
         
         try:
+            if not self.auth_token:
+                self.fail("No auth token available, cannot test user info")
+                
+            print(f"Using token: {self.auth_token[:20]}...")
             headers = {"Authorization": f"Bearer {self.auth_token}"}
             response = requests.get(
                 f"{self.base_url}/api/me",
@@ -140,6 +144,8 @@ class RedditSocialListenerAPITest(unittest.TestCase):
             )
             
             print(f"Get current user response status: {response.status_code}")
+            print(f"Get current user response body: {response.text}")
+            print(f"Headers sent: {headers}")
             
             self.assertEqual(response.status_code, 200)
             

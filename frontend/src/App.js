@@ -821,64 +821,130 @@ function App() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Analytics Dashboard</h2>
               
               {dashboardData ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Recent Searches */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Recent Searches</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {dashboardData.recent_searches?.slice(0, 5).map((search, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium">"{search.keyword}"</span>
-                          <span className="text-gray-600"> in r/{search.subreddit}</span>
-                          <div className="text-xs text-gray-500">
-                            {search.post_count} posts • {new Date(search.timestamp).toLocaleDateString()}
-                          </div>
+                <div className="space-y-6">
+                  {/* Summary Stats */}
+                  {dashboardData.summary_stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-blue-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600">{dashboardData.summary_stats.total_searches}</div>
+                        <div className="text-sm text-blue-800">Total Searches</div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600">{dashboardData.summary_stats.total_posts}</div>
+                        <div className="text-sm text-green-800">Posts Analyzed</div>
+                      </div>
+                      <div className="bg-purple-50 rounded-lg p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {dashboardData.summary_stats.avg_sentiment ? dashboardData.summary_stats.avg_sentiment.toFixed(1) : 'N/A'}
                         </div>
-                      ))}
+                        <div className="text-sm text-purple-800">Avg Sentiment</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Top Keywords */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Top Keywords</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {dashboardData.keyword_stats?.slice(0, 5).map((stat, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium">"{stat._id}"</span>
-                          <div className="text-xs text-gray-500">
-                            {stat.search_count} searches • {stat.total_posts} posts
-                            {stat.avg_sentiment && (
-                              <span className={`ml-2 ${getSentimentColor(stat.avg_sentiment)}`}>
-                                Sentiment: {stat.avg_sentiment.toFixed(1)}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Recent Searches */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Recent Searches</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {dashboardData.recent_searches?.length > 0 ? dashboardData.recent_searches.slice(0, 5).map((search, index) => (
+                          <div key={index} className="text-sm">
+                            <span className="font-medium">"{search.keyword}"</span>
+                            <span className="text-gray-600"> in r/{search.subreddit}</span>
+                            <div className="text-xs text-gray-500">
+                              {search.post_count} posts • {new Date(search.timestamp).toLocaleDateString()}
+                              {search.avg_sentiment && (
+                                <span className={`ml-2 ${getSentimentColor(search.avg_sentiment)}`}>
+                                  Sentiment: {search.avg_sentiment.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-sm text-gray-500">No searches yet</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Top Keywords */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Top Keywords</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {dashboardData.keyword_stats?.length > 0 ? dashboardData.keyword_stats.slice(0, 5).map((stat, index) => (
+                          <div key={index} className="text-sm">
+                            <span className="font-medium">"{stat._id}"</span>
+                            <div className="text-xs text-gray-500">
+                              {stat.search_count} searches • {stat.total_posts} posts
+                              {stat.avg_sentiment && (
+                                <span className={`ml-2 ${getSentimentColor(stat.avg_sentiment)}`}>
+                                  Sentiment: {stat.avg_sentiment.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-sm text-gray-500">No keywords yet</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Sentiment Trends */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Sentiment Trends</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {dashboardData.sentiment_trends?.length > 0 ? dashboardData.sentiment_trends.slice(0, 7).map((trend, index) => (
+                          <div key={index} className="text-sm">
+                            <span className="font-medium">{trend._id}</span>
+                            <div className="text-xs text-gray-500">
+                              {trend.post_count} posts • 
+                              <span className={`ml-1 ${getSentimentColor(trend.avg_sentiment)}`}>
+                                Avg sentiment: {trend.avg_sentiment.toFixed(1)}
                               </span>
-                            )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )) : (
+                          <div className="text-sm text-gray-500">No sentiment data yet</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Sentiment Trends */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Sentiment Trends</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {dashboardData.sentiment_trends?.slice(0, 7).map((trend, index) => (
-                        <div key={index} className="text-sm">
-                          <span className="font-medium">{trend._id}</span>
-                          <div className="text-xs text-gray-500">
-                            {trend.post_count} posts • 
-                            <span className={`ml-1 ${getSentimentColor(trend.avg_sentiment)}`}>
-                              Avg sentiment: {trend.avg_sentiment.toFixed(1)}
-                            </span>
+                  {/* Additional Charts Section */}
+                  {dashboardData.sentiment_trends?.length > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Sentiment Over Time</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {dashboardData.sentiment_trends.slice(0, 10).map((trend, index) => (
+                          <div key={index} className="flex items-center space-x-2 text-xs">
+                            <span className="text-gray-600">{trend._id}</span>
+                            <div 
+                              className={`w-3 h-3 rounded-full ${
+                                trend.avg_sentiment >= 7 ? 'bg-green-500' :
+                                trend.avg_sentiment >= 4 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              title={`Sentiment: ${trend.avg_sentiment.toFixed(1)}`}
+                            ></div>
+                            <span className="text-gray-500">({trend.post_count})</span>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Help Section */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-medium text-blue-900 mb-2">💡 Dashboard Tips</h3>
+                    <div className="text-sm text-blue-800 space-y-1">
+                      <p>• Perform some searches to see analytics data</p>
+                      <p>• Sentiment scores: 7-10 (Positive), 4-6 (Neutral), 0-3 (Negative)</p>
+                      <p>• Data updates automatically after each search</p>
+                      <p>• Use filters to refine your analysis</p>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-6xl mb-4">📊</div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                   <p className="text-gray-500 text-lg">Loading dashboard data...</p>
                 </div>
               )}

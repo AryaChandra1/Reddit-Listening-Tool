@@ -72,6 +72,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 json=payload
             )
             
+            print(f"Registration response status: {response.status_code}")
+            print(f"Registration response body: {response.text}")
+            
             self.assertEqual(response.status_code, 200)
             
             data = response.json()
@@ -109,6 +112,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 json=payload
             )
             
+            print(f"Login response status: {response.status_code}")
+            print(f"Login response body: {response.text}")
+            
             self.assertEqual(response.status_code, 200)
             
             data = response.json()
@@ -139,6 +145,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 f"{self.base_url}/api/me",
                 headers=headers
             )
+            
+            print(f"Get current user response status: {response.status_code}")
+            print(f"Get current user response body: {response.text}")
             
             self.assertEqual(response.status_code, 200)
             
@@ -171,6 +180,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 json=payload,
                 headers=headers
             )
+            
+            print(f"Search posts response status: {response.status_code}")
+            print(f"Search posts response body: {response.text[:200]}...")  # Show just the beginning
             
             self.assertEqual(response.status_code, 200)
             
@@ -220,6 +232,10 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 headers=headers
             )
             
+            print(f"Search for filter response status: {search_response.status_code}")
+            if search_response.status_code != 200:
+                print(f"Search for filter response body: {search_response.text}")
+            
             self.assertEqual(search_response.status_code, 200)
             posts = search_response.json()
             
@@ -239,6 +255,10 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 json={"posts": posts, "filters": filter_payload},
                 headers=headers
             )
+            
+            print(f"Filter posts response status: {filter_response.status_code}")
+            if filter_response.status_code != 200:
+                print(f"Filter posts response body: {filter_response.text}")
             
             self.assertEqual(filter_response.status_code, 200)
             
@@ -283,6 +303,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 headers=headers
             )
             
+            print(f"Summarize response status: {response.status_code}")
+            print(f"Summarize response body: {response.text}")
+            
             self.assertEqual(response.status_code, 200)
             
             data = response.json()
@@ -312,6 +335,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 json=payload,
                 headers=headers
             )
+            
+            print(f"Save keyword response status: {response.status_code}")
+            print(f"Save keyword response body: {response.text}")
             
             self.assertEqual(response.status_code, 200)
             
@@ -346,6 +372,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 f"{self.base_url}/api/saved-keywords",
                 headers=headers
             )
+            
+            print(f"Get saved keywords response status: {response.status_code}")
+            print(f"Get saved keywords response body: {response.text}")
             
             self.assertEqual(response.status_code, 200)
             
@@ -382,6 +411,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 headers=headers
             )
             
+            print(f"Dashboard response status: {response.status_code}")
+            print(f"Dashboard response body: {response.text}")
+            
             self.assertEqual(response.status_code, 200)
             
             data = response.json()
@@ -416,6 +448,10 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 headers=headers
             )
             
+            print(f"Search for export response status: {search_response.status_code}")
+            if search_response.status_code != 200:
+                print(f"Search for export response body: {search_response.text}")
+            
             self.assertEqual(search_response.status_code, 200)
             
             # Now test export
@@ -423,6 +459,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 f"{self.base_url}/api/export/csv?keyword={self.test_keyword}",
                 headers=headers
             )
+            
+            print(f"Export response status: {response.status_code}")
+            print(f"Export response body: {response.text[:200]}...")  # Show just the beginning
             
             # Check if we have data to export
             if response.status_code == 404:
@@ -464,6 +503,9 @@ class RedditSocialListenerAPITest(unittest.TestCase):
                 f"{self.base_url}/api/saved-keywords/{self.saved_keyword_id}",
                 headers=headers
             )
+            
+            print(f"Delete keyword response status: {response.status_code}")
+            print(f"Delete keyword response body: {response.text}")
             
             self.assertEqual(response.status_code, 200)
             

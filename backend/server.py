@@ -575,47 +575,127 @@ async def get_dashboard_data(current_user: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Database not available")
     
     try:
+        logger.info(f"Fetching dashboard data for user: {current_user}")
+        
         # Get recent searches
         recent_searches = list(searches_collection.find(
             {"user_id": current_user},
             {"_id": 0}
         ).sort("timestamp", -1).limit(10))
         
-        # Get sentiment trends
-        sentiment_data = list(posts_collection.aggregate([
-            {"$match": {"user_id": current_user, "sentiment_score": {"$exists": True}}},
-            {"$group": {
-                "_id": {
-                    "$dateToString": {
-                        "format": "%Y-%m-%d",
-                        "date": {"$dateFromString": {"dateString": "$search_timestamp"}}
+        logger.info(f"Found {len(recent_searches)} recent searches")
+        
+        # Get sentiment trends (simplified)
+        sentiment_data = []
+        try:
+            posts_with_sentiment = list(posts_collection.find(
+                {"user_id": current_user, "sentiment_score": {"$exists": True, "$ne": None}},
+                {"sentiment_score": 1, "search_timestamp": 1}
+            ).limit(100))
+            
+            # Group by date manually
+            date_groups = {}
+            for post in posts_with_sentiment:
+                if post.get("search_timestamp"):
+                    try:
+                        date_key = post["search_timestamp"][:10]  # Get YYYY-MM-DD
+                        if date_key not in date_groups:
+                            date_groups[date_key] = {"scores": [], "count": 0}
+                        date_groups[date_key]["scores"].append(post["sentiment_score"])
+                        date_groups[date_key]["count"] += 1
+                    except Exception as e:
+                        logger.warning(f"Error parsing date: {e}")
+                        continue
+            
+            # Convert to list format
+            for date_key, data in date_groups.items():
+                avg_sentiment = sum(data["scores"]) / len(data["scores"]) if data["scores"] else 5.0
+                sentiment_data.append({
+                    "_id": date_key,
+                    "avg_sentiment": round(avg_sentiment, 2),
+                    "post_count": data["count"]
+                })
+            
+            # Sort by date descending
+            sentiment_data.sort(key=lambda x: x["_id"], reverse=True)
+            sentiment_data = sentiment_data[:30]  # Keep last 30 days
+            
+        except Exception as e:
+            logger.error(f"Error calculating sentiment trends: {e}")
+            sentiment_data = []
+        
+        logger.info(f"Found {len(sentiment_data)} sentiment trend data points")
+        
+        # Get keyword performance (simplified)
+        keyword_stats = []
+        try:
+            keyword_aggregation = list(searches_collection.aggregate([
+                {"$match": {"user_id": current_user}},
+                {"$group": {
+                    "_id": "$keyword",
+                    "search_count": {"$sum": 1},
+                    "total_posts": {"$sum": "$post_count"},
+                    "avg_sentiment": {"$avg": "$avg_sentiment"},
+                    "last_search": {"$max": "$timestamp"}
+                }},
+                {"$sort": {"search_count": -1}},
+                {"$limit": 10}
+            ]))
+            keyword_stats = keyword_aggregation
+        except Exception as e:
+            logger.error(f"Error calculating keyword stats: {e}")
+            # Fallback: get keyword stats manually
+            search_docs = list(searches_collection.find({"user_id": current_user}))
+            keyword_counts = {}
+            for search in search_docs:
+                keyword = search.get("keyword", "unknown")
+                if keyword not in keyword_counts:
+                    keyword_counts[keyword] = {
+                        "_id": keyword,
+                        "search_count": 0,
+                        "total_posts": 0,
+                        "avg_sentiment": None,
+                        "last_search": search.get("timestamp")
                     }
-                },
-                "avg_sentiment": {"$avg": "$sentiment_score"},
-                "post_count": {"$sum": 1}
-            }},
-            {"$sort": {"_id": -1}},
-            {"$limit": 30}
-        ]))
+                keyword_counts[keyword]["search_count"] += 1
+                keyword_counts[keyword]["total_posts"] += search.get("post_count", 0)
+                if search.get("timestamp") and (not keyword_counts[keyword]["last_search"] or search.get("timestamp") > keyword_counts[keyword]["last_search"]):
+                    keyword_counts[keyword]["last_search"] = search.get("timestamp")
+            
+            keyword_stats = sorted(keyword_counts.values(), key=lambda x: x["search_count"], reverse=True)[:10]
         
-        # Get keyword performance
-        keyword_stats = list(searches_collection.aggregate([
-            {"$match": {"user_id": current_user}},
-            {"$group": {
-                "_id": "$keyword",
-                "search_count": {"$sum": 1},
-                "total_posts": {"$sum": "$post_count"},
-                "avg_sentiment": {"$avg": "$avg_sentiment"},
-                "last_search": {"$max": "$timestamp"}
-            }},
-            {"$sort": {"search_count": -1}},
-            {"$limit": 10}
-        ]))
+        logger.info(f"Found {len(keyword_stats)} keyword stats")
         
-        return {
+        # Calculate summary stats
+        total_searches = len(recent_searches) if len(recent_searches) < 10 else searches_collection.count_documents({"user_id": current_user})
+        total_posts = posts_collection.count_documents({"user_id": current_user})
+        
+        result = {
             "recent_searches": recent_searches,
             "sentiment_trends": sentiment_data,
-            "keyword_stats": keyword_stats
+            "keyword_stats": keyword_stats,
+            "summary_stats": {
+                "total_searches": total_searches,
+                "total_posts": total_posts,
+                "avg_sentiment": sum(item["avg_sentiment"] for item in sentiment_data if item.get("avg_sentiment")) / len(sentiment_data) if sentiment_data else None
+            }
+        }
+        
+        logger.info(f"Dashboard data prepared successfully")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching dashboard data: {e}")
+        # Return empty data instead of error to prevent UI breaks
+        return {
+            "recent_searches": [],
+            "sentiment_trends": [],
+            "keyword_stats": [],
+            "summary_stats": {
+                "total_searches": 0,
+                "total_posts": 0,
+                "avg_sentiment": None
+            }
         }
         
     except Exception as e:

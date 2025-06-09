@@ -3,16 +3,180 @@ import './App.css';
 
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 
-// Debug: Log the API URL
-console.log('API_BASE_URL:', API_BASE_URL);
+// Auth context
+const AuthContext = React.createContext();
 
+// Date formatting helper
+const formatDate = (timestamp) => {
+  return new Date(timestamp * 1000).toLocaleDateString();
+};
+
+const formatTimeAgo = (timestamp) => {
+  const now = new Date();
+  const postDate = new Date(timestamp * 1000);
+  const diffInHours = Math.floor((now - postDate) / (1000 * 60 * 60));
+  
+  if (diffInHours < 1) return 'Less than 1 hour ago';
+  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays} days ago`;
+};
+
+const getSentimentColor = (score) => {
+  if (score >= 7) return 'text-green-600';
+  if (score >= 4) return 'text-yellow-600';
+  return 'text-red-600';
+};
+
+const getSentimentLabel = (score) => {
+  if (score >= 7) return 'Positive';
+  if (score >= 4) return 'Neutral';
+  return 'Negative';
+};
+
+// Login/Register Component
+function AuthComponent({ onLogin }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    full_name: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const endpoint = isLogin ? '/api/login' : '/api/register';
+      const payload = isLogin 
+        ? { email: formData.email, password: formData.password }
+        : formData;
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        onLogin(data.user, data.access_token);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'An error occurred');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-white font-bold text-2xl">R</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Reddit Social Listening</h1>
+          <p className="text-gray-600 mt-2">
+            {isLogin ? 'Sign in to your account' : 'Create your account'}
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your full name"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 transition-all"
+          >
+            {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Main App Component
 function App() {
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [subreddit, setSubreddit] = useState('all');
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savedKeywords, setSavedKeywords] = useState([]);
   const [searchHistory, setSearchHistory] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
   
   // Filter states
   const [minUpvotes, setMinUpvotes] = useState('');
@@ -20,83 +184,101 @@ function App() {
   const [maxUpvotes, setMaxUpvotes] = useState('');
   const [maxComments, setMaxComments] = useState('');
   const [subredditFilter, setSubredditFilter] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [minSentiment, setMinSentiment] = useState('');
+  const [maxSentiment, setMaxSentiment] = useState('');
   
   // UI states
   const [activeTab, setActiveTab] = useState('search');
   const [showFilters, setShowFilters] = useState(false);
+  const [summarizing, setSummarizing] = useState({});
 
   useEffect(() => {
-    fetchSavedKeywords();
-    fetchSearchHistory();
+    // Check for existing auth
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
   }, []);
+
+  useEffect(() => {
+    if (user && token) {
+      fetchSavedKeywords();
+      fetchSearchHistory();
+      fetchDashboardData();
+    }
+  }, [user, token]);
+
+  const makeAuthenticatedRequest = async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers
+    };
+
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      headers
+    });
+
+    if (response.status === 401) {
+      // Token expired or invalid
+      handleLogout();
+      throw new Error('Authentication failed');
+    }
+
+    return response;
+  };
+
+  const handleLogin = (userData, userToken) => {
+    setUser(userData);
+    setToken(userToken);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
 
   const fetchSavedKeywords = async () => {
     try {
-      console.log('Fetching saved keywords from:', `${API_BASE_URL}/api/saved-keywords`);
-      const response = await fetch(`${API_BASE_URL}/api/saved-keywords`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Saved keywords response status:', response.status);
-      console.log('Saved keywords response ok:', response.ok);
-      
+      const response = await makeAuthenticatedRequest('/api/saved-keywords');
       if (response.ok) {
-        const text = await response.text();
-        console.log('Saved keywords raw response:', text);
-        
-        if (text) {
-          const data = JSON.parse(text);
-          setSavedKeywords(Array.isArray(data) ? data : []);
-        } else {
-          console.warn('Empty response for saved keywords');
-          setSavedKeywords([]);
-        }
-      } else {
-        console.error('Failed to fetch saved keywords:', response.status, response.statusText);
-        setSavedKeywords([]);
+        const data = await response.json();
+        setSavedKeywords(data || []);
       }
     } catch (error) {
       console.error('Error fetching saved keywords:', error);
-      setSavedKeywords([]);
     }
   };
 
   const fetchSearchHistory = async () => {
     try {
-      console.log('Fetching search history from:', `${API_BASE_URL}/api/search-history`);
-      const response = await fetch(`${API_BASE_URL}/api/search-history`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('Search history response status:', response.status);
-      console.log('Search history response ok:', response.ok);
-      
+      const response = await makeAuthenticatedRequest('/api/search-history');
       if (response.ok) {
-        const text = await response.text();
-        console.log('Search history raw response:', text);
-        
-        if (text) {
-          const data = JSON.parse(text);
-          setSearchHistory(Array.isArray(data) ? data : []);
-        } else {
-          console.warn('Empty response for search history');
-          setSearchHistory([]);
-        }
-      } else {
-        console.error('Failed to fetch search history:', response.status, response.statusText);
-        setSearchHistory([]);
+        const data = await response.json();
+        setSearchHistory(data || []);
       }
     } catch (error) {
       console.error('Error fetching search history:', error);
-      setSearchHistory([]);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await makeAuthenticatedRequest('/api/dashboard');
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
     }
   };
 
@@ -108,13 +290,8 @@ function App() {
 
     setLoading(true);
     try {
-      console.log('Searching posts with:', { keyword: searchKeyword, subreddit: searchSubreddit });
-      const response = await fetch(`${API_BASE_URL}/api/search-posts`, {
+      const response = await makeAuthenticatedRequest('/api/search-posts', {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           keyword: searchKeyword,
           subreddit: searchSubreddit,
@@ -122,35 +299,13 @@ function App() {
         }),
       });
 
-      console.log('Search posts response status:', response.status);
-      console.log('Search posts response ok:', response.ok);
-
       if (response.ok) {
-        const text = await response.text();
-        console.log('Search posts raw response length:', text?.length);
-        
-        if (text) {
-          const data = JSON.parse(text);
-          setPosts(Array.isArray(data) ? data : []);
-          fetchSearchHistory(); // Refresh search history
-        } else {
-          console.warn('Empty response for search posts');
-          setPosts([]);
-        }
+        const data = await response.json();
+        setPosts(Array.isArray(data) ? data : []);
+        fetchSearchHistory();
       } else {
-        let errorMessage = 'Unknown error occurred';
-        try {
-          const text = await response.text();
-          if (text) {
-            const error = JSON.parse(text);
-            errorMessage = error.detail || errorMessage;
-          } else {
-            errorMessage = response.statusText || errorMessage;
-          }
-        } catch (e) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        alert(`Error: ${errorMessage}`);
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail}`);
         setPosts([]);
       }
     } catch (error) {
@@ -162,6 +317,32 @@ function App() {
     }
   };
 
+  const summarizePost = async (postId, content) => {
+    setSummarizing(prev => ({ ...prev, [postId]: true }));
+    
+    try {
+      const response = await makeAuthenticatedRequest('/api/summarize', {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPosts(prevPosts => prevPosts.map(post => 
+          post.id === postId ? { ...post, summary: data.summary } : post
+        ));
+      } else {
+        const errorData = await response.json();
+        alert(`Error summarizing: ${errorData.detail}`);
+      }
+    } catch (error) {
+      console.error('Error summarizing:', error);
+      alert('Error generating summary');
+    } finally {
+      setSummarizing(prev => ({ ...prev, [postId]: false }));
+    }
+  };
+
   const saveKeyword = async () => {
     if (!keyword.trim()) {
       alert('Please enter a keyword to save');
@@ -169,11 +350,8 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/save-keyword`, {
+      const response = await makeAuthenticatedRequest('/api/save-keyword', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           keyword: keyword,
           subreddit: subreddit
@@ -184,14 +362,8 @@ function App() {
         fetchSavedKeywords();
         alert('Keyword saved successfully!');
       } else {
-        let errorMessage = 'Unknown error occurred';
-        try {
-          const error = await response.json();
-          errorMessage = error.detail || errorMessage;
-        } catch (e) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        alert(`Error: ${errorMessage}`);
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail}`);
       }
     } catch (error) {
       console.error('Error saving keyword:', error);
@@ -201,7 +373,7 @@ function App() {
 
   const deleteKeyword = async (keywordId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/saved-keywords/${keywordId}`, {
+      const response = await makeAuthenticatedRequest(`/api/saved-keywords/${keywordId}`, {
         method: 'DELETE',
       });
 
@@ -209,14 +381,8 @@ function App() {
         fetchSavedKeywords();
         alert('Keyword deleted successfully!');
       } else {
-        let errorMessage = 'Unknown error occurred';
-        try {
-          const error = await response.json();
-          errorMessage = error.detail || errorMessage;
-        } catch (e) {
-          errorMessage = response.statusText || errorMessage;
-        }
-        alert(`Error: ${errorMessage}`);
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail}`);
       }
     } catch (error) {
       console.error('Error deleting keyword:', error);
@@ -224,34 +390,64 @@ function App() {
     }
   };
 
+  const exportToCSV = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (keyword) params.append('keyword', keyword);
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+
+      const response = await makeAuthenticatedRequest(`/api/export/csv?${params.toString()}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create and download CSV file
+        const blob = new Blob([data.content], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = data.filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.detail}`);
+      }
+    } catch (error) {
+      console.error('Error exporting:', error);
+      alert('Error exporting data');
+    }
+  };
+
   const applyFilters = () => {
-    const filtered = posts.filter(post => {
+    return posts.filter(post => {
       if (minUpvotes && post.upvotes < parseInt(minUpvotes)) return false;
       if (maxUpvotes && post.upvotes > parseInt(maxUpvotes)) return false;
       if (minComments && post.comments < parseInt(minComments)) return false;
       if (maxComments && post.comments > parseInt(maxComments)) return false;
       if (subredditFilter && !post.subreddit.toLowerCase().includes(subredditFilter.toLowerCase())) return false;
+      if (minSentiment && (post.sentiment_score === null || post.sentiment_score < parseFloat(minSentiment))) return false;
+      if (maxSentiment && (post.sentiment_score === null || post.sentiment_score > parseFloat(maxSentiment))) return false;
+      
+      // Date filters
+      if (startDate || endDate) {
+        const postDate = new Date(post.created_utc * 1000);
+        if (startDate && postDate < new Date(startDate)) return false;
+        if (endDate && postDate > new Date(endDate)) return false;
+      }
+      
       return true;
     });
-    return filtered;
   };
 
   const filteredPosts = applyFilters();
 
-  const formatDate = (timestamp) => {
-    return new Date(timestamp * 1000).toLocaleDateString();
-  };
-
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date();
-    const postDate = new Date(timestamp * 1000);
-    const diffInHours = Math.floor((now - postDate) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Less than 1 hour ago';
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} days ago`;
-  };
+  if (!user) {
+    return <AuthComponent onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -265,36 +461,55 @@ function App() {
               </div>
               <h1 className="ml-3 text-3xl font-bold text-gray-900">Reddit Social Listening Tool</h1>
             </div>
-            <div className="flex space-x-4">
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-600">Welcome, {user.full_name}</span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('search')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'search' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Search
+                </button>
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'dashboard' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setActiveTab('keywords')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'keywords' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  Keywords
+                </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    activeTab === 'history' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 hover:text-blue-600'
+                  }`}
+                >
+                  History
+                </button>
+              </div>
               <button
-                onClick={() => setActiveTab('search')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'search' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
-                Search
-              </button>
-              <button
-                onClick={() => setActiveTab('keywords')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'keywords' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                Saved Keywords
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'history' 
-                    ? 'bg-blue-500 text-white' 
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                History
+                Logout
               </button>
             </div>
           </div>
@@ -363,15 +578,23 @@ function App() {
                 >
                   {showFilters ? 'Hide Filters' : 'Show Filters'}
                 </button>
+
+                <button
+                  onClick={exportToCSV}
+                  disabled={posts.length === 0}
+                  className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Export CSV
+                </button>
               </div>
             </div>
 
-            {/* Filters */}
+            {/* Enhanced Filters */}
             {showFilters && (
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Advanced Filters</h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Min Upvotes
@@ -423,18 +646,57 @@ function App() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Subreddit Filter
+                      Sentiment (0-10)
                     </label>
-                    <input
-                      type="text"
-                      value={subredditFilter}
-                      onChange={(e) => setSubredditFilter(e.target.value)}
-                      placeholder="Filter by subreddit"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="flex gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={minSentiment}
+                        onChange={(e) => setMinSentiment(e.target.value)}
+                        placeholder="Min"
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={maxSentiment}
+                        onChange={(e) => setMaxSentiment(e.target.value)}
+                        placeholder="Max"
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -494,13 +756,25 @@ function App() {
                             <span className="mr-1">💬</span>
                             {post.comments}
                           </span>
+                          {post.sentiment_score !== null && (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSentimentColor(post.sentiment_score)} bg-gray-100`}>
+                              😊 {post.sentiment_score.toFixed(1)} ({getSentimentLabel(post.sentiment_score)})
+                            </span>
+                          )}
                         </div>
                         
                         {post.body && (
                           <p className="text-gray-700 mb-3 line-clamp-3">{post.body}</p>
                         )}
+
+                        {post.summary && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                            <h5 className="font-medium text-blue-900 mb-1">AI Summary:</h5>
+                            <p className="text-blue-800 text-sm">{post.summary}</p>
+                          </div>
+                        )}
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <a
                             href={post.permalink}
                             target="_blank"
@@ -520,12 +794,94 @@ function App() {
                               Original Link →
                             </a>
                           )}
+
+                          {!post.summary && (
+                            <button
+                              onClick={() => summarizePost(post.id, `${post.title} ${post.body || ''}`)}
+                              disabled={summarizing[post.id]}
+                              className="inline-flex items-center px-3 py-1.5 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {summarizing[post.id] ? 'Summarizing...' : '🤖 Summarize'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Analytics Dashboard</h2>
+              
+              {dashboardData ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Recent Searches */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Recent Searches</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {dashboardData.recent_searches?.slice(0, 5).map((search, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium">"{search.keyword}"</span>
+                          <span className="text-gray-600"> in r/{search.subreddit}</span>
+                          <div className="text-xs text-gray-500">
+                            {search.post_count} posts • {new Date(search.timestamp).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top Keywords */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Top Keywords</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {dashboardData.keyword_stats?.slice(0, 5).map((stat, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium">"{stat._id}"</span>
+                          <div className="text-xs text-gray-500">
+                            {stat.search_count} searches • {stat.total_posts} posts
+                            {stat.avg_sentiment && (
+                              <span className={`ml-2 ${getSentimentColor(stat.avg_sentiment)}`}>
+                                Sentiment: {stat.avg_sentiment.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sentiment Trends */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">Sentiment Trends</h3>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {dashboardData.sentiment_trends?.slice(0, 7).map((trend, index) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium">{trend._id}</span>
+                          <div className="text-xs text-gray-500">
+                            {trend.post_count} posts • 
+                            <span className={`ml-1 ${getSentimentColor(trend.avg_sentiment)}`}>
+                              Avg sentiment: {trend.avg_sentiment.toFixed(1)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-6xl mb-4">📊</div>
+                  <p className="text-gray-500 text-lg">Loading dashboard data...</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -546,7 +902,7 @@ function App() {
                 {savedKeywords.map((savedKeyword) => (
                   <div key={savedKeyword.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-gray-900">{savedKeyword.keyword}</h3>
+                      <h3 className="font-semibold text-gray-900">"{savedKeyword.keyword}"</h3>
                       <button
                         onClick={() => deleteKeyword(savedKeyword.id)}
                         className="text-red-500 hover:text-red-700 text-sm"
@@ -603,9 +959,14 @@ function App() {
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                       <span>r/{search.subreddit}</span>
                       <span>{search.post_count} posts found</span>
+                      {search.avg_sentiment && (
+                        <span className={`${getSentimentColor(search.avg_sentiment)}`}>
+                          Avg sentiment: {search.avg_sentiment.toFixed(1)}
+                        </span>
+                      )}
                     </div>
                     
                     <button
@@ -615,7 +976,7 @@ function App() {
                         setActiveTab('search');
                         searchPosts(search.keyword, search.subreddit);
                       }}
-                      className="mt-3 bg-gray-500 text-white px-3 py-1.5 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                      className="bg-gray-500 text-white px-3 py-1.5 rounded-lg hover:bg-gray-600 transition-colors text-sm"
                     >
                       Search Again
                     </button>
